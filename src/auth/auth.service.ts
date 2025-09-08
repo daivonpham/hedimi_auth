@@ -1,12 +1,16 @@
-import { Injectable, UnauthorizedException, ConflictException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import * as bcrypt from 'bcryptjs';
-import { User, UserRole } from './entities/user.entity';
-import { RefreshToken } from './entities/refresh-token.entity';
-import { RegisterDto } from './dto/register.dto';
-import { LoginDto } from './dto/login.dto';
+import {
+  Injectable,
+  UnauthorizedException,
+  ConflictException,
+} from "@nestjs/common";
+import { JwtService } from "@nestjs/jwt";
+import { InjectRepository } from "@nestjs/typeorm";
+import { Repository } from "typeorm";
+import * as bcrypt from "bcryptjs";
+import { User, UserRole } from "./entities/user.entity";
+import { RefreshToken } from "./entities/refresh-token.entity";
+import { RegisterDto } from "./dto/register.dto";
+import { LoginDto } from "./dto/login.dto";
 
 @Injectable()
 export class AuthService {
@@ -15,7 +19,7 @@ export class AuthService {
     private usersRepository: Repository<User>,
     @InjectRepository(RefreshToken)
     private refreshTokenRepository: Repository<RefreshToken>,
-    private jwtService: JwtService,
+    private jwtService: JwtService
   ) {}
 
   async register(registerDto: RegisterDto) {
@@ -27,7 +31,7 @@ export class AuthService {
     });
 
     if (existingUser) {
-      throw new ConflictException('Username or email already exists');
+      throw new ConflictException("Username or email already exists");
     }
 
     // Hash password
@@ -43,7 +47,7 @@ export class AuthService {
 
     await this.usersRepository.save(user);
 
-    return { message: 'User registered successfully' };
+    return { message: "User registered successfully" };
   }
 
   async validateUser(loginDto: LoginDto) {
@@ -53,13 +57,13 @@ export class AuthService {
     });
 
     if (!user) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException("Invalid credentials");
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Invalid credentials');
+      throw new UnauthorizedException("Invalid credentials");
     }
 
     return user;
@@ -74,12 +78,12 @@ export class AuthService {
 
     // Generate access token
     const accessToken = this.jwtService.sign(payload, {
-      expiresIn: '15m',
+      expiresIn: "15m",
     });
 
     // Generate refresh token
     const refreshToken = this.jwtService.sign(payload, {
-      expiresIn: '7d',
+      expiresIn: "7d",
     });
 
     // Save refresh token
@@ -101,18 +105,18 @@ export class AuthService {
     try {
       // Verify refresh token
       const payload = this.jwtService.verify(refreshToken);
-      
+
       // Check if token exists and is not revoked
       const tokenEntity = await this.refreshTokenRepository.findOne({
         where: {
           token: refreshToken,
           revoked: false,
         },
-        relations: ['user'],
+        relations: ["user"],
       });
 
       if (!tokenEntity || new Date() > tokenEntity.expires_at) {
-        throw new UnauthorizedException('Invalid refresh token');
+        throw new UnauthorizedException("Invalid refresh token");
       }
 
       // Revoke old refresh token
@@ -122,7 +126,7 @@ export class AuthService {
       // Generate new tokens
       return this.login(tokenEntity.user);
     } catch {
-      throw new UnauthorizedException('Invalid refresh token');
+      throw new UnauthorizedException("Invalid refresh token");
     }
   }
 
@@ -140,17 +144,17 @@ export class AuthService {
       await this.refreshTokenRepository.save(tokenEntity);
     }
 
-    return { message: 'Logged out successfully' };
+    return { message: "Logged out successfully" };
   }
 
   async getProfile(userId: number) {
     const user = await this.usersRepository.findOne({
       where: { id: userId },
-      select: ['id', 'username', 'email', 'role', 'created_at'],
+      select: ["id", "username", "email", "role", "created_at"],
     });
 
     if (!user) {
-      throw new UnauthorizedException('User not found');
+      throw new UnauthorizedException("User not found");
     }
 
     return user;
